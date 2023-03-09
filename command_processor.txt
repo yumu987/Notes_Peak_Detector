@@ -1,0 +1,47 @@
+Command Processor:
+
+基本流程：
+a.Rx Pattern Recogniser从Rx那里得到有效指令后（无效的被Echoing打印出来），下达指令（注意start和numWords引脚）给Data Processor开始得数据。
+b.当Data Processor得到所需要给出多少个byte的数据后（例如，A030表示需要30个byte的数据，不过Data Processor得到的是030，Recogniser记得分辨），一个一个丢给Data Echoing（dataReady，byte和seqDone引脚），让Data Echoing打印在终端屏幕上。
+c.Data Processor同时也处理好了数据中的peak以及相对应的max_index，同时将数据包丢给L打印和P打印。
+d.P和L打印会先存住所得数据（等待Rx Pattern Recogniser的P和L指令，得到后再丢给Data Echoing），根据seqDone来判断数据是否为同一个数据包。若在seqDone结束后得到新数据，表示这是下一个数据包了，丢弃前面的数据，存入新的数据，等待新的seqDone结束。
+e.同理，Data Echoing根据seqDone判断数据是否为同一个数据包，若新的数据到来，丢弃前面的数据包，开始接收新的并打印新的数据。
+f.当P和L从Rx Pattern Recogniser那里得到了相对应指令，立即将数据丢给Data Echoing来处理后，给到Tx并打印数据。
+g.若Rx Pattern Recogniser得到了要新的数据包命令(ANNN/aNNN)，开始新的start和numWords指令给Data Processor开始得新的数据包。
+h.Data Processor在得到新的start和numWords指令后，应该立即抛弃原来的数据包（其实Data Processor也没必要存，直接丢就好了，每次得到新数据拿次数据就直接处理好了丢。看你们设计），从Data Generator那里得到新的数据后，丢新数据给Data Echoing，L Printing和P Printing。
+i.最后，重复该流程。注意硬件（芯片）的Reset信号。当Reset启动，所有数据清空。
+
+1. Rx Pattern Recogniser:
+识别从Rx（终端）传递过来的指令（该指令为一个一个byte（即8个bits）传递），若指令有效则按照指令执行，若无效直接发给Data Echoing来打印出来。
+有效指令：
+先操作ANNN/aNNN，先从Data Processor那里得到数据包，再执行P打印或者L打印。
+任何时候都可以重置，详情见硬件Reset信号。
+无效指令：
+在没有得到ANNN/aNNN数据包之前先执行P或者L打印，该P和L将交给Echoing来直接打出来。
+任何不是ANNN/annn/L/P的东西，例如"a","Ieatapple"等等，直接丢给Echoing打印。
+
+2. L Printing:
+给出peak的前三位，peak本身和peak的后三位到Data Echoing。L会从Data Processor那里接收对应数据，等待指令。如果seqDone后收到新数据，丢弃之前的数据。
+
+3. P Printing:
+给出peak本身及其对应索引index。P会从Data Processor那里接收对应数据，等待指令。如果seqDone后收到新数据，丢弃之前的数据。
+
+4. Data Echoing:
+记得Data数据转换成十六进制，Index索引转换成十进制。
+如果从Rx Pattern Recogniser那里得到了无效指令，直接打印出来。
+如果从Data Processor那里得到一个一个的byte数据，一起打印出来，并根据seqDone判断该数据是否为老的数据还是新的数据。
+如果从L Printing那里得到了信号和数据，打印L的值。
+如果从P Printing那里得到了信号和数据，打印P的值。
+输出的打印值给到Tx里面。
+注意打印出的格式，例如"6F 8B E9"。其中都是ASCII'6' ASCII'F' ASCII'_'。
+用ASCII'_'表示空格。否则数据全部挤成一团了。
+
+Notes：
+判断peak，整组数据中最大值，而非绝对值，注意signed（即第一位为8,9以及后面ABCDEF我们判断为负数，可以见附带文档）的处理。
+Example：
+7B EE A9 1C 2E中，一般7B为peak，EE和A9为负数判断。
+如果连续输入两次A030（连续给两个30个byte数据），注意这两次都是新的数据，不会打印出一摸一样的结果。Data Processor还是要重新拿数据。
+如果peak为整个数据包的前三位或者后三位，可以交给Data Echoing来补0。
+
+dataReady:判断下一个byte（8个bits）已经准备好
+seqDone:判断整个（该）数据包结束

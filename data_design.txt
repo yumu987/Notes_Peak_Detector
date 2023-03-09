@@ -1,0 +1,7 @@
+data处理设计：
+1.七个七个的处理，利用寄存器存住这个array数列。
+2。先取前七个输入的数，比较出其中一个最大的值，将这个最大的值存在队列的index为3的位置。 counter计输入了多少个值
+3.将新输入的值与该值进行比较，如果比当前值大则将index3的位置shift到新输入的值的位置
+
+Register Counter Shifter Comparetor
+

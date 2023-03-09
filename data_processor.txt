@@ -1,0 +1,41 @@
+Data Processor:
+TA的方法：
+本质：还是一个一个相比较
+我们可以设计出两个数列，一个命名为current_Window，另外一个为max_Window。所以，我们假设：
+
+current_Window :=       (_, _, _, _, _, _, _) --这里的意思为，存储这7个byte数据的数列，注意每一个byte为8个bits，每一次shift我们都是走1个byte或者8个bits
+current_Window_index := (_, _, _, _, _, _, _) --这里表示上面数列的每个值相对应的index索引
+
+max_Window :=       (_, _, _, _, _, _, _) --存放已知的peak
+max_Window_index := (_, _, _, _, _, _, _) --存放已知的peak的index索引
+
+Example:
+我们从一开始进数据开始：
+我们得到随机数据：
+data :=  (4, 2, 8, 1, 9, 3, 1...)
+index := (0, 1, 2, 3, 4, 5, 6...)
+1.我们先看头七个，每个相互比较，在这组数据中，我们发现，最大为9。在这时候，我们的current_Window是这样：
+current_Window :=       (4, 2, 8, 1, 9, 3, 1)
+current_Window_index := (0, 1, 2, 3, 4, 5, 6)
+2.我们将该7个数据相互比较后，得到9为最大的，这时候我们将数据放进max_Window，将对应index索引放进max_Window_index，并继续拿数据放进current_Window...
+max_Window :=       (2, 8, 1, 9, 3, 1, 6) --这个6的index为7，我们后面拿的一位补上max
+max_Window_index := (1, 2, 3, 4, 5, 6, 7) --此时，我们的peak为9，相对应index为4
+3.当然，我们的数据还没跑完，current_Window和current_Window_index继续进数据，max直到发现比9大的数据之前不会改变，此时max的index为4
+current_Window := (2, 8, 1, 9, 3, 1, 6...)
+current_Window := (8, 1, 9, 3, 1, 6, 7...)
+current_Window := (1, 9, 3, 1, 6, 7, 1...)
+......
+当然current_Window_index也要继续跑！
+current_Window_index := (1, 2, 3, 4, 5, 6, 7...)
+current_Window_index := (2, 3, 4, 5, 6, 7, 8...)
+current_Window_index := (3, 4, 5, 6, 7, 8, 9...) --记得一个一个进，一个一个跑
+......
+4.如果当我们current_Window发现了更大的数据：
+Example:
+current_Window :=       (11, 13, 6, 4, 81, 21, 8...)
+current_Window_index := (41, 42, 43, 44, 45, 46, 47...)
+这里我们通过一个一个比较，发现81大于9且大于其他数据，则更新max:
+max_Window :=       (13, 6, 4, 81, 21, 8, 11) --11为补上的且小于81，继续补
+max_Window_index := (42, 43, 44, 45, 46, 47, 48)
+此时，我们的peak为81，对应index为45
+5.若最大为整组数据的前三个或者最后三个，可以交给data echoing来补0就行
