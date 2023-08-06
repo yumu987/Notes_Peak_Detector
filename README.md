@@ -1,2 +1,2 @@
 # Notes_Peak_Detector
-Study notes for Digital Design Assignment 2
+Study notes for Digital Design Assignment 2.
